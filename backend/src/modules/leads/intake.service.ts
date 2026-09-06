@@ -35,11 +35,52 @@ const countSentTodayTx = (tx: Tx, brokerId: number, timezone: string, at: Date) 
   });
 };
 
+/**
+ * Last-resort persistence. If routing throws, the visitor's details would otherwise be
+ * lost entirely — they filled in a form and got a 500. Recording the lead as `failed`
+ * keeps it visible on the leads and distribution pages so an admin can assign it by hand.
+ */
+const recordFailedLead = async (
+  base: Omit<Prisma.LeadUncheckedCreateInput, 'status'>,
+  cause: unknown,
+) => {
+  const distribution = await prisma.distribution.findFirst({ select: { id: true } }).catch(() => null);
+
+  try {
+    return await prisma.lead.create({
+      data: {
+        ...base,
+        distributionId: distribution?.id ?? null,
+        status: 'failed',
+        statusReason: 'The lead could not be routed because of a system error',
+        events: {
+          create: {
+            type: 'failed',
+            message: `Routing failed: ${cause instanceof Error ? cause.message : 'unknown error'}`.slice(0, 500),
+          },
+        },
+      },
+      include: { broker: true },
+    });
+  } catch {
+    // The database itself is unreachable; nothing can be salvaged.
+    throw cause;
+  }
+};
+
 export const submitLead = async (params: SubmitLeadParams) => {
   const form = await prisma.form.findUnique({ where: { slug: params.slug } });
   if (!form) throw AppError.notFound('This form does not exist');
 
   const at = new Date();
+
+  const identity = {
+    name: params.name,
+    email: params.email,
+    phone: params.phone,
+    ipAddress: params.ipAddress,
+    formId: form.id,
+  };
 
   return prisma.$transaction(
     async (tx) => {
@@ -54,14 +95,7 @@ export const submitLead = async (params: SubmitLeadParams) => {
         await tx.$queryRaw`SELECT id FROM distributions WHERE id = ${distribution.id} FOR UPDATE`;
       }
 
-      const base = {
-        name: params.name,
-        email: params.email,
-        phone: params.phone,
-        ipAddress: params.ipAddress,
-        formId: form.id,
-        distributionId: distribution?.id ?? null,
-      };
+      const base = { ...identity, distributionId: distribution?.id ?? null };
 
       if (await isDuplicate(tx, params.email)) {
         return tx.lead.create({
@@ -159,7 +193,7 @@ export const submitLead = async (params: SubmitLeadParams) => {
     },
     { timeout: 15_000 },
   ).catch((error) => {
-    logger.error({ err: error }, 'Lead intake failed');
-    throw error;
+    logger.error({ err: error }, 'Lead intake failed, recording the lead as failed');
+    return recordFailedLead(identity, error);
   });
 };
