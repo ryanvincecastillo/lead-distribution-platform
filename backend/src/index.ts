@@ -3,8 +3,8 @@ import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
 import { prisma } from './lib/prisma.js';
 
-const server = createApp().listen(env.PORT, () => {
-  logger.info(`API listening on http://localhost:${env.PORT} [${env.NODE_ENV}]`);
+const server = createApp().listen(env.PORT, env.HOST, () => {
+  logger.info(`API listening on http://${env.HOST}:${env.PORT} [${env.NODE_ENV}]`);
 });
 
 /**

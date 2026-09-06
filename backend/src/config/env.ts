@@ -11,7 +11,10 @@ const toBoolean = (value: string | undefined) => value === 'true' || value === '
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    PORT: z.coerce.number().int().positive().default(4000),
+    PORT: z.coerce.number().int().positive().default(4400),
+    // Bound to loopback in production so the API is unreachable from outside the
+    // host, even if the firewall would otherwise allow its port.
+    HOST: z.string().default('0.0.0.0'),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
     JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
