@@ -1,0 +1,229 @@
+@import 'tailwindcss';
+
+/*
+  Design tokens derived from Apple's Human Interface Guidelines: a near-neutral canvas,
+  elevated white surfaces, hairline separators rather than heavy borders, and the iOS
+  system colour roles. Every token is a CSS variable so light and dark are one swap,
+  and @theme inline exposes them to Tailwind utilities.
+*/
+:root {
+  color-scheme: light;
+
+  --canvas: #f2f2f7;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #ebebf0;
+  --overlay: rgba(255, 255, 255, 0.72);
+
+  --hairline: rgba(60, 60, 67, 0.12);
+  --hairline-strong: rgba(60, 60, 67, 0.22);
+
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #8e8e93;
+  --text-inverse: #ffffff;
+
+  --accent: #007aff;
+  --accent-hover: #0071e3;
+  --accent-soft: rgba(0, 122, 255, 0.12);
+
+  --success: #248a3d;
+  --success-soft: rgba(52, 199, 89, 0.16);
+  --warning: #b25000;
+  --warning-soft: rgba(255, 159, 10, 0.18);
+  --danger: #d70015;
+  --danger-soft: rgba(255, 59, 48, 0.14);
+  --neutral-soft: rgba(120, 120, 128, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --canvas: #000000;
+    --surface: #1c1c1e;
+    --surface-raised: #2c2c2e;
+    --surface-sunken: #131315;
+    --overlay: rgba(28, 28, 30, 0.72);
+
+    --hairline: rgba(84, 84, 88, 0.4);
+    --hairline-strong: rgba(120, 120, 128, 0.5);
+
+    --text: #f5f5f7;
+    --text-secondary: #a1a1a6;
+    --text-tertiary: #6e6e73;
+    --text-inverse: #1d1d1f;
+
+    --accent: #0a84ff;
+    --accent-hover: #409cff;
+    --accent-soft: rgba(10, 132, 255, 0.2);
+
+    --success: #30d158;
+    --success-soft: rgba(48, 209, 88, 0.18);
+    --warning: #ff9f0a;
+    --warning-soft: rgba(255, 159, 10, 0.18);
+    --danger: #ff453a;
+    --danger-soft: rgba(255, 69, 58, 0.18);
+    --neutral-soft: rgba(120, 120, 128, 0.24);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.7);
+  }
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --canvas: #000000;
+  --surface: #1c1c1e;
+  --surface-raised: #2c2c2e;
+  --surface-sunken: #131315;
+  --overlay: rgba(28, 28, 30, 0.72);
+
+  --hairline: rgba(84, 84, 88, 0.4);
+  --hairline-strong: rgba(120, 120, 128, 0.5);
+
+  --text: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-tertiary: #6e6e73;
+  --text-inverse: #1d1d1f;
+
+  --accent: #0a84ff;
+  --accent-hover: #409cff;
+  --accent-soft: rgba(10, 132, 255, 0.2);
+
+  --success: #30d158;
+  --success-soft: rgba(48, 209, 88, 0.18);
+  --warning: #ff9f0a;
+  --warning-soft: rgba(255, 159, 10, 0.18);
+  --danger: #ff453a;
+  --danger-soft: rgba(255, 69, 58, 0.18);
+  --neutral-soft: rgba(120, 120, 128, 0.24);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.7);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+
+  --color-ink: var(--text);
+  --color-ink-secondary: var(--text-secondary);
+  --color-ink-tertiary: var(--text-tertiary);
+  --color-ink-inverse: var(--text-inverse);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-neutral-soft: var(--neutral-soft);
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI',
+    Roboto, sans-serif;
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 30px;
+
+  --shadow-soft: var(--shadow-sm);
+  --shadow-card: var(--shadow-md);
+  --shadow-float: var(--shadow-lg);
+}
+
+* {
+  border-color: var(--hairline);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text);
+  font-feature-settings: 'ss01', 'cv05';
+  letter-spacing: -0.011em;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* Tight, Apple-like tracking on large type. */
+.text-display {
+  letter-spacing: -0.028em;
+}
+
+/* Translucent chrome, the way iOS toolbars sit above content. */
+.glass {
+  background: var(--overlay);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+}
+
+/* Hairlines stay 1 physical pixel on retina rather than blooming to 2. */
+.hairline-b {
+  box-shadow: inset 0 -1px 0 0 var(--hairline);
+}
+
+.hairline-t {
+  box-shadow: inset 0 1px 0 0 var(--hairline);
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+/* Focus ring matching the system accent, never the browser default. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
