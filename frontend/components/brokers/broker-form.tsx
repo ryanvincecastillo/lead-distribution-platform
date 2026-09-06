@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -66,18 +66,13 @@ export function BrokerFormModal({
       : ['Asia/Manila', 'Asia/Singapore', 'Europe/London', 'America/New_York', 'UTC'];
   }, []);
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: DEFAULTS });
-
-  useEffect(() => {
-    if (!open) return;
-    reset(
+  /**
+   * Fed to react-hook-form as `values` rather than applied through a reset() in an
+   * effect. An effect runs *after* the first paint, so the edit dialog would render one
+   * frame of empty inputs before the broker's details appeared.
+   */
+  const formValues = useMemo<FormValues>(
+    () =>
       broker
         ? {
             name: broker.name,
@@ -93,8 +88,20 @@ export function BrokerFormModal({
             isActive: broker.isActive,
           }
         : DEFAULTS,
-    );
-  }, [open, broker, reset]);
+    [broker],
+  );
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: formValues,
+    values: formValues,
+  });
 
   const save = useMutation({
     mutationFn: (values: FormValues) => {
