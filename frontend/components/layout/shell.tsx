@@ -84,12 +84,25 @@ export function Shell({ children }: { children: ReactNode }) {
           <ThemeToggle />
         </div>
         <div className="bg-sunken flex items-center gap-2.5 rounded-[12px] p-2.5">
-          <div className="bg-accent grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-white">
-            {user?.email?.[0]?.toUpperCase() ?? '·'}
-          </div>
+          {user ? (
+            <div className="bg-accent grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-white">
+              {(user.name ?? user.email)[0]?.toUpperCase()}
+            </div>
+          ) : (
+            <div className="bg-neutral-soft size-8 shrink-0 animate-pulse rounded-full" />
+          )}
           <div className="min-w-0 flex-1">
-            <p className="text-ink truncate text-[13px] font-medium">{user?.name ?? 'Admin'}</p>
-            <p className="text-ink-tertiary truncate text-[12px]">{user?.email ?? ''}</p>
+            {user ? (
+              <>
+                <p className="text-ink truncate text-[13px] font-medium">{user.name ?? 'Admin'}</p>
+                <p className="text-ink-tertiary truncate text-[12px]">{user.email}</p>
+              </>
+            ) : (
+              <>
+                <div className="bg-neutral-soft h-3 w-24 animate-pulse rounded" />
+                <div className="bg-neutral-soft mt-1.5 h-2.5 w-32 animate-pulse rounded" />
+              </>
+            )}
           </div>
           <button
             onClick={() => logout.mutate()}

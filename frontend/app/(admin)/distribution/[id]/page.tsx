@@ -97,7 +97,7 @@ export default function DistributionDetailPage({ params }: { params: Promise<{ i
         ) : leads.isError ? (
           <ErrorState message="Lead history could not be loaded." onRetry={() => leads.refetch()} />
         ) : visible.length > 0 ? (
-          <Table className="min-w-[940px]">
+          <Table className="min-w-[1020px]">
             <thead>
               <tr>
                 <Th>Lead</Th>

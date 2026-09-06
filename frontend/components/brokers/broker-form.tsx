@@ -147,7 +147,7 @@ export function BrokerFormModal({
     >
       <form
         id="broker-form"
-        onSubmit={handleSubmit((values) => save.mutateAsync(values))}
+        onSubmit={handleSubmit((values) => save.mutateAsync(values).catch(() => undefined))}
         className="space-y-4"
         noValidate
       >

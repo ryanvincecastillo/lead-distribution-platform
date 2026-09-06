@@ -172,7 +172,7 @@ export default function FormPage() {
         />
         <CardBody>
           <form
-            onSubmit={handleSubmit((values) => create.mutateAsync(values))}
+            onSubmit={handleSubmit((values) => create.mutateAsync(values).catch(() => undefined))}
             className="space-y-4"
             noValidate
           >

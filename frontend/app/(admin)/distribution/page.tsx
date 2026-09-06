@@ -45,16 +45,18 @@ export default function DistributionPage() {
     if (!brokers.data) return;
 
     setRows(
-      brokers.data.map((broker) => {
+      [...brokers.data]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((broker) => {
         const membership = distribution.data?.brokers.find((item) => item.brokerId === broker.id);
         return {
           brokerId: broker.id,
           name: broker.name,
           percentage: membership?.percentage ?? 0,
           isActive: membership?.isActive ?? true,
-          included: Boolean(membership),
-        };
-      }),
+            included: Boolean(membership),
+          };
+        }),
     );
   }, [brokers.data, distribution.data]);
 
@@ -144,6 +146,15 @@ export default function DistributionPage() {
                     </p>
                   </div>
                 ) : null}
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button onClick={() => create.mutate()} loading={create.isPending}>
+                    Create distribution
+                  </Button>
+                  <span className="text-ink-tertiary text-[13px]">
+                    {included.length} broker{included.length === 1 ? '' : 's'} selected below
+                  </span>
+                </div>
               </CardBody>
             </Card>
           ) : null}
@@ -240,18 +251,15 @@ export default function DistributionPage() {
               </ul>
             )}
 
-            {rows.length > 0 ? (
+            {rows.length > 0 && exists ? (
               <div className="hairline-t flex flex-wrap items-center justify-between gap-3 px-5 py-4">
                 <p className="text-ink-tertiary text-[12.5px]">
                   {totalPercentage === 100
                     ? 'Shares add up to 100%.'
                     : 'Shares do not add up to 100% — routing still works, but the split will not match your intent.'}
                 </p>
-                <Button
-                  onClick={() => (exists ? save.mutate() : create.mutate())}
-                  loading={create.isPending || save.isPending}
-                >
-                  {exists ? 'Save changes' : 'Create distribution'}
+                <Button onClick={() => save.mutate()} loading={save.isPending}>
+                  Save changes
                 </Button>
               </div>
             ) : null}

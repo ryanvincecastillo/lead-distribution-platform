@@ -120,7 +120,7 @@ export default function LeadsPage() {
           <ErrorState message="Leads could not be loaded." onRetry={() => leads.refetch()} />
         ) : leads.data && leads.data.data.length > 0 ? (
           <>
-            <Table className="min-w-[1000px]">
+            <Table className="min-w-[1180px]">
               <thead>
                 <tr>
                   <Th>Lead name</Th>
@@ -137,12 +137,12 @@ export default function LeadsPage() {
               <tbody>
                 {leads.data.data.map((lead) => (
                   <Tr key={lead.id}>
-                    <Td className="font-medium">{lead.name}</Td>
-                    <Td className="text-ink-secondary">{lead.email}</Td>
+                    <Td className="font-medium whitespace-nowrap">{lead.name}</Td>
+                    <Td className="text-ink-secondary whitespace-nowrap">{lead.email}</Td>
                     <Td className="text-ink-secondary tabular-nums">{lead.phone}</Td>
                     <Td className="text-ink-secondary tabular-nums">{lead.ipAddress}</Td>
-                    <Td className="text-ink-secondary">{lead.form?.name ?? '—'}</Td>
-                    <Td className="text-ink-secondary">{lead.broker?.name ?? '—'}</Td>
+                    <Td className="text-ink-secondary whitespace-nowrap">{lead.form?.name ?? '—'}</Td>
+                    <Td className="text-ink-secondary whitespace-nowrap">{lead.broker?.name ?? '—'}</Td>
                     <Td>
                       <StatusBadge status={lead.status} />
                     </Td>

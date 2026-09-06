@@ -13,7 +13,7 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
   return (
     <th
       className={cn(
-        'text-ink-tertiary hairline-b px-5 py-2.5 text-left text-[12px] font-medium tracking-wide uppercase',
+        'text-ink-tertiary hairline-b px-5 py-2.5 text-left text-[12px] font-medium tracking-wide whitespace-nowrap uppercase',
         className,
       )}
     >

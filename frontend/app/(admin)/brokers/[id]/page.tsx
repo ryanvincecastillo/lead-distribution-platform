@@ -98,7 +98,7 @@ export default function BrokerDetailPage({ params }: { params: Promise<{ id: str
         ) : leads.isError ? (
           <ErrorState message="Leads for this broker could not be loaded." onRetry={() => leads.refetch()} />
         ) : leads.data && leads.data.length > 0 ? (
-          <Table className="min-w-[900px]">
+          <Table className="min-w-[980px]">
             <thead>
               <tr>
                 <Th>Lead name</Th>
@@ -113,11 +113,11 @@ export default function BrokerDetailPage({ params }: { params: Promise<{ id: str
             <tbody>
               {leads.data.map((lead) => (
                 <Tr key={lead.id}>
-                  <Td className="font-medium">{lead.name}</Td>
-                  <Td className="text-ink-secondary">{lead.email}</Td>
+                  <Td className="font-medium whitespace-nowrap">{lead.name}</Td>
+                  <Td className="text-ink-secondary whitespace-nowrap">{lead.email}</Td>
                   <Td className="text-ink-secondary tabular-nums">{lead.phone}</Td>
                   <Td className="text-ink-secondary tabular-nums">{lead.ipAddress}</Td>
-                  <Td className="text-ink-secondary">{lead.form?.name ?? '—'}</Td>
+                  <Td className="text-ink-secondary whitespace-nowrap">{lead.form?.name ?? '—'}</Td>
                   <Td className="text-ink-secondary whitespace-nowrap">
                     {formatDateTime(lead.assignedAt ?? lead.createdAt)}
                   </Td>

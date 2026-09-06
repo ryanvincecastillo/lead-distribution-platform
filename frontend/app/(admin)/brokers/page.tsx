@@ -58,7 +58,7 @@ export default function BrokersPage() {
         ) : brokers.isError ? (
           <ErrorState message="The broker list could not be loaded." onRetry={() => brokers.refetch()} />
         ) : brokers.data && brokers.data.length > 0 ? (
-          <Table className="min-w-[860px]">
+          <Table className="min-w-[920px]">
             <thead>
               <tr>
                 <Th>Broker</Th>
