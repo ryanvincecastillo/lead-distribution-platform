@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ArrowRight, Clock, Share2 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
@@ -40,9 +40,26 @@ export default function DistributionPage() {
     queryFn: () => api.get<Distribution | null>('/distribution'),
   });
 
-  // Seed the editable table from whichever source is authoritative right now.
+  /**
+   * Re-seeding on every query result would discard the admin's in-progress selections and
+   * typed percentages whenever a background refetch landed. This fingerprints the server
+   * state and only re-seeds when it has genuinely changed.
+   */
+  const seededFrom = useRef<string | null>(null);
+
   useEffect(() => {
     if (!brokers.data) return;
+
+    const fingerprint = [
+      brokers.data.map((broker) => broker.id).join(','),
+      distribution.data?.id ?? 'none',
+      distribution.data?.brokers
+        .map((broker) => `${broker.brokerId}:${broker.percentage}:${broker.isActive}`)
+        .join(',') ?? '',
+    ].join('|');
+
+    if (seededFrom.current === fingerprint) return;
+    seededFrom.current = fingerprint;
 
     setRows(
       [...brokers.data]

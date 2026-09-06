@@ -150,7 +150,8 @@ export default function LeadsPage() {
                       {formatDateTime(lead.createdAt)}
                     </Td>
                     <Td className="text-right">
-                      {lead.status === 'unsent' ? (
+                      {/* Failed leads also have no broker, so they are assignable too. */}
+                      {lead.status === 'unsent' || lead.status === 'failed' ? (
                         <Button variant="secondary" size="sm" onClick={() => setAssigning(lead)}>
                           <UserPlus className="size-3.5" /> Assign
                         </Button>

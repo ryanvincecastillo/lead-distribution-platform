@@ -353,16 +353,49 @@ All admin routes require the session cookie. Responses are `{ data }`, or
 
 ## Testing
 
+### Unit tests — the routing engine
+
 ```bash
 cd backend
-npm test          # unit tests
+npm test          # 26 tests
 npm run test:watch
 ```
 
-The suite covers the routing engine directly: timezone and DST boundaries, overnight
-windows, invalid schedules, daily-cap enforcement, the deficit formula against the
+Covers the engine directly: timezone and DST boundaries, overnight windows that cross
+midnight, invalid schedules, daily-cap enforcement, the deficit formula against the
 specification's worked example, tie-breaking, and a 100-lead simulation asserting the split
 converges exactly on the configured percentages.
+
+### End-to-end tests — the whole product in a browser
+
+```bash
+cd frontend
+npx playwright install chromium   # first run only
+npm run test:e2e                  # 29 tests
+npm run test:e2e:ui               # interactive runner
+```
+
+The two suites walk the specification in order — `admin-workflow.spec.ts` covers login,
+the singleton rules, the required "Oops, please create a form first." prompt and broker
+management; `lead-lifecycle.spec.ts` covers public submission, the 5/3/2 split, email
+normalisation, IP capture, duplicate blocking, cap and opening-hours skipping, manual
+assignment and the reporting pages.
+
+They run serially against a **live application and a database containing only the seeded
+admin account**, because they assert rules like "a second form cannot be created". Reset
+first:
+
+```bash
+cd backend && npm run db:reset
+```
+
+Point them at any deployment:
+
+```bash
+E2E_BASE_URL=http://YOUR_SERVER_IP:8228 \
+E2E_ADMIN_PASSWORD=your_admin_password \
+npm run test:e2e
+```
 
 ---
 
@@ -379,6 +412,11 @@ cd lead-distribution-platform
 cd backend && npm ci && cd ..
 cd frontend && npm ci && cd ..
 ```
+
+> **npm 11.19 and later** block package install scripts by default and print
+> `npm warn install-scripts`. That means Prisma's `postinstall` does not run, so the client
+> is not generated automatically. The next step runs `prisma generate` explicitly, which
+> covers it — no script approval is required.
 
 ### 2. Configure
 
