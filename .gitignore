@@ -17,3 +17,7 @@ out/
 # pm2 logs — keep the directory so PM2 has somewhere to write on a fresh clone
 logs/*
 !logs/.gitkeep
+
+# playwright output
+test-results/
+playwright-report/
