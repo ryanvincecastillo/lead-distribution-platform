@@ -1,0 +1,158 @@
+// Lead Distribution Platform — data model
+//
+// Design notes:
+//  - Form and Distribution are singletons. That rule is enforced by the database
+//    (a unique column that always defaults to 1), not only by service code, so a
+//    race between two concurrent requests cannot produce a second row.
+//  - Broker availability is a *wall clock rule*, not an instant: opening/closing are
+//    "HH:mm" strings and workingDays is a CSV of ISO weekdays, both interpreted in
+//    the broker's own IANA timezone.
+//  - LeadEvent is an append-only decision log so the distribution detail page can
+//    explain why any given lead landed where it did.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique(map: "users_email_key")
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Broker {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String?
+  isActive    Boolean   @default(true)
+  dailyCap    Int       @default(0)
+  timezone    String    @default("Asia/Manila")
+  openingTime String    @db.Char(5) // "HH:mm" in `timezone`
+  closingTime String    @db.Char(5) // "HH:mm" in `timezone`
+  workingDays String    @db.VarChar(20) // ISO weekdays, 1=Mon .. 7=Sun, e.g. "1,2,3,4,5"
+  deletedAt   DateTime? // soft delete: leads keep their historical broker reference
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  distributionBrokers DistributionBroker[]
+  leads               Lead[]
+
+  @@index([isActive, deletedAt])
+  @@map("brokers")
+}
+
+model Form {
+  id        Int      @id @default(autoincrement())
+  singleton Int      @unique(map: "forms_singleton_key") @default(1)
+  name      String
+  slug      String   @unique(map: "forms_slug_key")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  distribution Distribution?
+  leads        Lead[]
+
+  @@map("forms")
+}
+
+model Distribution {
+  id        Int      @id @default(autoincrement())
+  singleton Int      @unique(map: "distributions_singleton_key") @default(1)
+  name      String
+  formId    Int      @unique(map: "distributions_form_id_key")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  form    Form                 @relation(fields: [formId], references: [id], onDelete: Cascade)
+  brokers DistributionBroker[]
+  leads   Lead[]
+
+  @@map("distributions")
+}
+
+model DistributionBroker {
+  id             Int      @id @default(autoincrement())
+  distributionId Int
+  brokerId       Int
+  percentage     Decimal  @default(0) @db.Decimal(5, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  distribution Distribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
+  broker       Broker       @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+
+  @@unique([distributionId, brokerId], map: "distribution_brokers_distribution_broker_key")
+  @@index([brokerId])
+  @@map("distribution_brokers")
+}
+
+enum LeadStatus {
+  sent
+  unsent
+  duplicate
+  failed
+}
+
+model Lead {
+  id             Int        @id @default(autoincrement())
+  name           String
+  email          String // always stored normalized: trim + lowercase
+  phone          String
+  ipAddress      String     @db.VarChar(45) // fits IPv6
+  status         LeadStatus @default(unsent)
+  formId         Int
+  distributionId Int?
+  brokerId       Int?
+  assignedAt     DateTime? // when a broker actually received it
+  assignedManual Boolean    @default(false)
+  statusReason   String?    @db.VarChar(255) // human-readable why for unsent/failed/duplicate
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  form         Form          @relation(fields: [formId], references: [id])
+  distribution Distribution? @relation(fields: [distributionId], references: [id])
+  broker       Broker?       @relation(fields: [brokerId], references: [id])
+  events       LeadEvent[]
+
+  @@index([email])
+  @@index([brokerId, assignedAt])
+  @@index([status, createdAt])
+  @@index([distributionId, createdAt])
+  @@map("leads")
+}
+
+enum LeadEventType {
+  received
+  duplicate_detected
+  no_distribution
+  no_eligible_broker
+  assigned
+  manually_assigned
+  failed
+}
+
+model LeadEvent {
+  id        Int           @id @default(autoincrement())
+  leadId    Int
+  type      LeadEventType
+  message   String        @db.VarChar(500)
+  context   Json? // eligibility snapshot: deficits, skip reasons per broker
+  createdAt DateTime      @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@map("lead_events")
+}
