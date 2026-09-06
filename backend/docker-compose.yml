@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ldp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: lead_distribution
+      MYSQL_USER: ldp_user
+      MYSQL_PASSWORD: ldp_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - ldp_mysql_data:/var/lib/mysql
+
+volumes:
+  ldp_mysql_data:
