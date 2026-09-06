@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
-import { brokerDayRange } from '../distribution/schedule.js';
+import { countSentTodayForBrokers } from '../brokers/broker.service.js';
 import { selectBroker, type BrokerCandidate } from '../distribution/engine.js';
 import type { PublicLeadInput } from './lead.schema.js';
 
@@ -27,13 +27,6 @@ const asJson = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJ
  */
 const isDuplicate = async (tx: Tx, email: string) =>
   (await tx.lead.count({ where: { email, brokerId: { not: null } } })) > 0;
-
-const countSentTodayTx = (tx: Tx, brokerId: number, timezone: string, at: Date) => {
-  const { start, end } = brokerDayRange(timezone, at);
-  return tx.lead.count({
-    where: { brokerId, status: 'sent', assignedAt: { gte: start, lte: end } },
-  });
-};
 
 /**
  * Last-resort persistence. If routing throws, the visitor's details would otherwise be
@@ -135,19 +128,25 @@ export const submitLead = async (params: SubmitLeadParams) => {
         });
       }
 
-      const candidates: BrokerCandidate[] = await Promise.all(
-        distribution.brokers.map(async (membership) => ({
-          brokerId: membership.brokerId,
-          brokerName: membership.broker.name,
-          percentage: Number(membership.percentage),
-          activeInDistribution: membership.isActive,
-          brokerIsActive: membership.broker.isActive,
-          brokerIsDeleted: membership.broker.deletedAt !== null,
-          dailyCap: membership.broker.dailyCap,
-          sentToday: await countSentTodayTx(tx, membership.brokerId, membership.broker.timezone, at),
-          schedule: membership.broker,
-        })),
+      // Counts for every candidate in one query, inside the same transaction so the
+      // numbers are consistent with the row lock taken above.
+      const sentToday = await countSentTodayForBrokers(
+        distribution.brokers.map((membership) => membership.broker),
+        at,
+        tx,
       );
+
+      const candidates: BrokerCandidate[] = distribution.brokers.map((membership) => ({
+        brokerId: membership.brokerId,
+        brokerName: membership.broker.name,
+        percentage: Number(membership.percentage),
+        activeInDistribution: membership.isActive,
+        brokerIsActive: membership.broker.isActive,
+        brokerIsDeleted: membership.broker.deletedAt !== null,
+        dailyCap: membership.broker.dailyCap,
+        sentToday: sentToday.get(membership.brokerId) ?? 0,
+        schedule: membership.broker,
+      }));
 
       const { selectedBrokerId, evaluations, totalSentToday } = selectBroker(candidates, at);
 

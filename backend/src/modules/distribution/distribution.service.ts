@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
-import { countSentToday } from '../brokers/broker.service.js';
+import { countSentTodayForBrokers } from '../brokers/broker.service.js';
 import { evaluateAvailability } from './schedule.js';
 import type { CreateDistributionInput, SetDistributionBrokersInput } from './distribution.schema.js';
 
@@ -18,14 +18,19 @@ const membershipInclude = {
 
 const serialize = async (
   distribution: Prisma.DistributionGetPayload<{ include: typeof membershipInclude }>,
-) => ({
-  id: distribution.id,
-  name: distribution.name,
-  isActive: distribution.isActive,
-  createdAt: distribution.createdAt,
-  form: distribution.form,
-  brokers: await Promise.all(
-    distribution.brokers.map(async (membership) => {
+) => {
+  // One query for every broker's daily count rather than one query per broker.
+  const sentToday = await countSentTodayForBrokers(
+    distribution.brokers.map((membership) => membership.broker),
+  );
+
+  return {
+    id: distribution.id,
+    name: distribution.name,
+    isActive: distribution.isActive,
+    createdAt: distribution.createdAt,
+    form: distribution.form,
+    brokers: distribution.brokers.map((membership) => {
       const availability = evaluateAvailability(membership.broker);
 
       return {
@@ -40,13 +45,13 @@ const serialize = async (
         closingTime: membership.broker.closingTime,
         workingDays: membership.broker.workingDays,
         dailyCap: membership.broker.dailyCap,
-        sentToday: await countSentToday(membership.brokerId, membership.broker.timezone),
+        sentToday: sentToday.get(membership.brokerId) ?? 0,
         isOpenNow: availability.isOpen,
         closedReason: availability.reason ?? null,
       };
     }),
-  ),
-});
+  };
+};
 
 export const getDistribution = async () => {
   const distribution = await prisma.distribution.findFirst({ include: membershipInclude });

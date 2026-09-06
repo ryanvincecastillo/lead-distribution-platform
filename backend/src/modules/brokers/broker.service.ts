@@ -1,9 +1,13 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../lib/errors.js';
 import { brokerDayRange } from '../distribution/schedule.js';
 import type { CreateBrokerInput, UpdateBrokerInput } from './broker.schema.js';
 
 const visible = { deletedAt: null };
+
+/** Accepts either the shared client or a transaction client. */
+type DbClient = Pick<Prisma.TransactionClient, 'lead'>;
 
 /** Leads assigned to this broker during the broker's *own* calendar day. */
 export const countSentToday = async (brokerId: number, timezone: string, at = new Date()) => {
@@ -12,6 +16,54 @@ export const countSentToday = async (brokerId: number, timezone: string, at = ne
   return prisma.lead.count({
     where: { brokerId, status: 'sent', assignedAt: { gte: start, lte: end } },
   });
+};
+
+/**
+ * Today's count for many brokers in a *single* query.
+ *
+ * Counting per broker is one query each, so a list of N brokers cost N+1 round trips.
+ * Each broker's "today" differs — it is their own local calendar day — so this widens the
+ * filter to the union of every broker's day, fetches that slice once, and then applies each
+ * broker's own boundaries in memory. The union spans at most ~50 hours regardless of how
+ * many brokers there are.
+ */
+export const countSentTodayForBrokers = async (
+  brokers: { id: number; timezone: string }[],
+  at: Date = new Date(),
+  client: DbClient = prisma,
+): Promise<Map<number, number>> => {
+  const counts = new Map<number, number>(brokers.map((broker) => [broker.id, 0]));
+  if (brokers.length === 0) return counts;
+
+  const ranges = brokers.map((broker) => ({
+    id: broker.id,
+    ...brokerDayRange(broker.timezone, at),
+  }));
+
+  const windowStart = new Date(Math.min(...ranges.map((range) => range.start.getTime())));
+  const windowEnd = new Date(Math.max(...ranges.map((range) => range.end.getTime())));
+
+  const rows = await client.lead.findMany({
+    where: {
+      status: 'sent',
+      brokerId: { in: brokers.map((broker) => broker.id) },
+      assignedAt: { gte: windowStart, lte: windowEnd },
+    },
+    select: { brokerId: true, assignedAt: true },
+  });
+
+  const rangeById = new Map(ranges.map((range) => [range.id, range]));
+
+  for (const row of rows) {
+    if (row.brokerId === null || row.assignedAt === null) continue;
+    const range = rangeById.get(row.brokerId);
+    if (!range) continue;
+    if (row.assignedAt >= range.start && row.assignedAt <= range.end) {
+      counts.set(row.brokerId, (counts.get(row.brokerId) ?? 0) + 1);
+    }
+  }
+
+  return counts;
 };
 
 export const listBrokers = async () => {
@@ -24,21 +76,21 @@ export const listBrokers = async () => {
     },
   });
 
-  return Promise.all(
-    brokers.map(async (broker) => {
-      const { _count, distributionBrokers, ...rest } = broker;
-      const membership = distributionBrokers[0];
+  const sentToday = await countSentTodayForBrokers(brokers);
 
-      return {
-        ...rest,
-        totalLeads: _count.leads,
-        sentToday: await countSentToday(broker.id, broker.timezone),
-        distribution: membership
-          ? { percentage: Number(membership.percentage), isActive: membership.isActive }
-          : null,
-      };
-    }),
-  );
+  return brokers.map((broker) => {
+    const { _count, distributionBrokers, ...rest } = broker;
+    const membership = distributionBrokers[0];
+
+    return {
+      ...rest,
+      totalLeads: _count.leads,
+      sentToday: sentToday.get(broker.id) ?? 0,
+      distribution: membership
+        ? { percentage: Number(membership.percentage), isActive: membership.isActive }
+        : null,
+    };
+  });
 };
 
 export const getBroker = async (id: number) => {
